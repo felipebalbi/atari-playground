@@ -21,6 +21,9 @@ start:
 	lda #$c6		; player 1 light gree
 	sta COLUP1
 
+	ldy #$02
+	sty CTRLPF
+
 ;;; Start a new frame by turning on vblank and vsync
 next_frame:
 	lda #$02
@@ -43,57 +46,53 @@ next_frame:
 	lda #$00
 	sta VBLANK		; turn off VBLANK
 
-;;; Set the CTRLPF register to allow reflection
-	ldx #$01
-	stx CTRLPF
-
-;;; Draw the playfield
-	;; skip 7 scanlines
-	ldx #$00
-	stx PF0
-	stx PF1
-	stx PF2
-	REPEAT 7
+visible_scanlines:
+	;; 10 empty scanlines
+	REPEAT 10
 	sta WSYNC
 	REPEND
 
-	;; set the PF0 to $0e and PF1/2 to $ff, repeat 7 times
-	ldx #$e0
-	stx PF0
-	ldx #$ff
-	stx PF1
-	stx PF2
-	REPEAT 7
+	ldy #0
+scoreboard_loop:
+	lda number_bitmap,y
+	sta PF1
+	sta WSYNC
+	iny
+	cpy #10
+	bne scoreboard_loop
+
+	lda #0
+	sta PF1
+
+	REPEAT 50
 	sta WSYNC
 	REPEND
 
-	;; set PF0 to $20 and PF1/2 to $00, repeat 164 times
-	ldx #$60
-	stx PF0
-	ldx #$00
-	stx PF1
-	ldx #$80
-	stx PF2
-	REPEAT 164
+	ldy #0
+player0_loop:
+	lda player_bitmap,y
+	sta GRP0
 	sta WSYNC
-	REPEND
+	iny
+	cpy #10
+	bne player0_loop
 
-	;; set the PF0 to $0e and PF1/2 to $ff, repeat 7 times
-	ldx #$e0
-	stx PF0
-	ldx #$ff
-	stx PF1
-	stx PF2
-	REPEAT 7
+	lda #0
+	sta GRP0
+	
+	ldy #0
+player1_loop:
+	lda player_bitmap,y
+	sta GRP1
 	sta WSYNC
-	REPEND
+	iny
+	cpy #10
+	bne player1_loop
 
-	;; skip 7 scanlines
-	ldx #$00
-	stx PF0
-	stx PF1
-	stx PF2
-	REPEAT 7
+	lda #0
+	sta GRP1
+	
+	REPEAT 102
 	sta WSYNC
 	REPEND
 
@@ -109,6 +108,32 @@ next_frame:
 	sta VBLANK
 
 	jmp next_frame
+
+	org $ffe8
+player_bitmap:
+	.byte #%01111110
+	.byte #%11111111
+	.byte #%10011001
+	.byte #%11111111
+	.byte #%11111111
+	.byte #%11111111
+	.byte #%10111101
+	.byte #%11000011
+	.byte #%11111111
+	.byte #%01111110
+
+	org $fff2
+number_bitmap:
+	.byte #%00001110
+	.byte #%00001110
+	.byte #%00000010
+	.byte #%00000010
+	.byte #%00001110
+	.byte #%00001110
+	.byte #%00001000
+	.byte #%00001000
+	.byte #%00001110
+	.byte #%00001110
 
 ;;; Fill ROM size to 4KiB
 	org $fffc
